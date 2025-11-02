@@ -75,6 +75,9 @@ const Home = () => {
       });
 
     // ✅ Socket.io connection fix for Render
+    console.log("🌍 API_URL =", API_URL);
+    console.log("🔌 SOCKET_URL =", SOCKET_URL);
+
     const tempSocket = io(SOCKET_URL, {
       withCredentials: true,
       transports: ["websocket"], // Force WebSocket to avoid CORS issues
