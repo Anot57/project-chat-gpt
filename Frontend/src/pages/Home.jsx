@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { io } from "socket.io-client";
 import ChatMobileBar from '../components/chat/ChatMobileBar.jsx';
 import ChatSidebar from '../components/chat/ChatSidebar.jsx';
@@ -22,13 +22,14 @@ const Home = () => {
   const activeChatId = useSelector(state => state.chat.activeChatId);
   const input = useSelector(state => state.chat.input);
   const isSending = useSelector(state => state.chat.isSending);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socket, setSocket] = useState(null);
-
-  // ✅ FIXED: now matches backend (_id)
-  const activeChat = chats.find(c => c._id === activeChatId) || null;
-
   const [messages, setMessages] = useState([]);
+
+  // ✅ Auto-detect environment (Render or local)
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+  const activeChat = chats.find(c => c._id === activeChatId) || null;
 
   const handleNewChat = async () => {
     let title = window.prompt('Enter a title for the new chat:', '');
@@ -36,9 +37,8 @@ const Home = () => {
     if (!title) return;
 
     try {
-      // ✅ FIXED: changed to local backend
       const response = await axios.post(
-        "http://localhost:3000/api/chat",
+        `${API_URL}/api/chat`,
         { title },
         { withCredentials: true }
       );
@@ -47,14 +47,14 @@ const Home = () => {
       dispatch(startNewChat(response.data.chat));
       setSidebarOpen(false);
     } catch (err) {
-      console.error("Error creating chat:", err);
+      console.error("❌ Error creating chat:", err);
     }
   };
 
-  // Load chats + connect socket
+  // ✅ Load chats & connect to socket
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/chat", { withCredentials: true })
+      .get(`${API_URL}/api/chat`, { withCredentials: true })
       .then(async (response) => {
         const chatList = response.data.chats.reverse();
         dispatch(setChats(chatList));
@@ -68,16 +68,14 @@ const Home = () => {
         }
       })
       .catch((err) => {
-        console.error("Error fetching chats:", err);
+        console.error("❌ Error fetching chats:", err);
       });
 
-    // ✅ FIXED: connect to local socket
-    const tempSocket = io("http://localhost:3000", {
-      withCredentials: true,
-    });
+    // ✅ Connect to backend socket (Render or local)
+    const tempSocket = io(API_URL, { withCredentials: true });
 
     tempSocket.on("ai-response", (messagePayload) => {
-      console.log("Received AI response:", messagePayload);
+      console.log("🤖 Received AI response:", messagePayload);
       setMessages((prevMessages) => [
         ...prevMessages,
         { type: "ai", content: messagePayload.content },
@@ -94,8 +92,7 @@ const Home = () => {
     if (!trimmed || !activeChatId || isSending) return;
     dispatch(sendingStarted());
 
-    const newMessages = [...messages, { type: "user", content: trimmed }];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, { type: "user", content: trimmed }]);
     dispatch(setInput(""));
 
     socket.emit("ai-message", {
@@ -106,9 +103,8 @@ const Home = () => {
 
   const getMessages = async (chatId) => {
     try {
-      // ✅ FIXED: changed to local backend
       const response = await axios.get(
-        `http://localhost:3000/api/chat/messages/${chatId}`,
+        `${API_URL}/api/chat/messages/${chatId}`,
         { withCredentials: true }
       );
 
@@ -119,7 +115,7 @@ const Home = () => {
         }))
       );
     } catch (err) {
-      console.error("Error fetching messages:", err);
+      console.error("❌ Error fetching messages:", err);
     }
   };
 
@@ -146,14 +142,12 @@ const Home = () => {
             <div className="chip">Early Preview</div>
             <h1>ChatGPT Clone</h1>
             <p>
-              Ask anything. Paste text, brainstorm ideas, or get quick
-              explanations. Your chats stay in the sidebar so you can pick up
-              where you left off.
+              Ask anything. Paste text, brainstorm ideas, or get quick explanations.
+              Your chats stay in the sidebar so you can pick up where you left off.
             </p>
           </div>
         )}
         <ChatMessages messages={messages} isSending={isSending} />
-        {/* ✅ FIXED: Typing bar will now appear */}
         {activeChatId && (
           <ChatComposer
             input={input}

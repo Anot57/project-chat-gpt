@@ -10,7 +10,11 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // ← up
 function initSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: "http://localhost:5174",
+      origin: [
+        "http://localhost:5174",
+        "https://project-chat-gpt.onrender.com", // your frontend URL on Render
+      ],
+
       credentials: true,
     },
   });
