@@ -13,20 +13,39 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ CORS fix — allows cookies from frontend
-app.use(cors({
-  origin: [
-    "http://localhost:5174",
-    "https://project-chat-gpt.onrender.com",
-  ],
-  credentials: true
-}));
+// ✅ Dynamic CORS — allow Render + localhost
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://project-chat-gpt.onrender.com",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.warn("❌ Blocked by CORS:", origin);
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // ✅ API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 
-// ✅ Static files (optional)
+// ✅ Serve frontend (optional for fullstack deployment)
 app.use(express.static(path.join(__dirname, "../public")));
+
+// ✅ Health check route (useful for Render)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", message: "Server running fine 🚀" });
+});
 
 module.exports = app;
