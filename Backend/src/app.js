@@ -14,12 +14,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ✅ CORS fix — allows cookies from frontend
-app.use(
-  cors({
-    origin: "http://localhost:5174", // frontend dev URL
-    credentials: true, // ✅ critical for cookies
-  })
-);
+app.use(cors({
+  origin: [
+    "http://localhost:5174",
+    "https://project-chat-gpt.onrender.com",
+  ],
+  credentials: true
+}));
 
 // ✅ API routes
 app.use("/api/auth", authRoutes);

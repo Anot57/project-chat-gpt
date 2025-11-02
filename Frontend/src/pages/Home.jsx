@@ -22,15 +22,18 @@ const Home = () => {
   const activeChatId = useSelector(state => state.chat.activeChatId);
   const input = useSelector(state => state.chat.input);
   const isSending = useSelector(state => state.chat.isSending);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
 
-  // ✅ Auto-detect environment (Render or local)
+  // ✅ Get backend URLs from environment
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
 
   const activeChat = chats.find(c => c._id === activeChatId) || null;
 
+  // ✅ Start a new chat
   const handleNewChat = async () => {
     let title = window.prompt('Enter a title for the new chat:', '');
     if (title) title = title.trim();
@@ -42,7 +45,6 @@ const Home = () => {
         { title },
         { withCredentials: true }
       );
-
       getMessages(response.data.chat._id);
       dispatch(startNewChat(response.data.chat));
       setSidebarOpen(false);
@@ -51,7 +53,7 @@ const Home = () => {
     }
   };
 
-  // ✅ Load chats & connect to socket
+  // ✅ Fetch chats & connect socket
   useEffect(() => {
     axios
       .get(`${API_URL}/api/chat`, { withCredentials: true })
@@ -71,8 +73,19 @@ const Home = () => {
         console.error("❌ Error fetching chats:", err);
       });
 
-    // ✅ Connect to backend socket (Render or local)
-    const tempSocket = io(API_URL, { withCredentials: true });
+    // ✅ Socket.io connection fix for Render
+    const tempSocket = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ["websocket"], // Force WebSocket to avoid CORS issues
+    });
+
+    tempSocket.on("connect", () => {
+      console.log("✅ Socket connected:", tempSocket.id);
+    });
+
+    tempSocket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err);
+    });
 
     tempSocket.on("ai-response", (messagePayload) => {
       console.log("🤖 Received AI response:", messagePayload);
@@ -87,6 +100,7 @@ const Home = () => {
     return () => tempSocket.disconnect();
   }, []);
 
+  // ✅ Send a message
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || !activeChatId || isSending) return;
@@ -95,12 +109,17 @@ const Home = () => {
     setMessages(prev => [...prev, { type: "user", content: trimmed }]);
     dispatch(setInput(""));
 
-    socket.emit("ai-message", {
-      chat: activeChatId,
-      content: trimmed,
-    });
+    if (socket && socket.connected) {
+      socket.emit("ai-message", {
+        chat: activeChatId,
+        content: trimmed,
+      });
+    } else {
+      console.error("⚠️ Socket not connected, message not sent.");
+    }
   };
 
+  // ✅ Fetch chat messages
   const getMessages = async (chatId) => {
     try {
       const response = await axios.get(
