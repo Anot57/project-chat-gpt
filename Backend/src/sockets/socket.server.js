@@ -11,12 +11,12 @@ function initSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
       origin: [
+        "http://localhost:5173",
         "http://localhost:5174",
-        "https://project-chat-gpt.onrender.com", // your frontend URL on Render
+        "https://project-chat-gpt.onrender.com", // frontend
       ],
-
-      credentials: true,
-    },
+      credentials: true
+    }
   });
 
   io.on("connection", (socket) => {

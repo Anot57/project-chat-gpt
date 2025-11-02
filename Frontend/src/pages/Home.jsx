@@ -28,7 +28,8 @@ const Home = () => {
   const [messages, setMessages] = useState([]);
 
   // ✅ Get backend URLs from environment
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  // const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
   const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
 
   const activeChat = chats.find(c => c._id === activeChatId) || null;
